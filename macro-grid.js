@@ -13,7 +13,7 @@ Hooks.once("setup", async () => {
   game.settings.register('macro-grid', 'onStartup', {
     name: `Display on Startup`,
     hint: `Determines whether the macro grid shows when the page is ready`,
-    scope: "world",
+    scope: "client",
     config: true,
     type: Boolean,
     default: false,
