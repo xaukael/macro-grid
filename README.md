@@ -2,9 +2,9 @@
 
 Grid for managing macro hotbars of all users.
 
-LeftClick a macro to execute
+LeftClick a macro to execute it.
 
-RightClick a macro to edit
+RightClick a macro to edit it.
 
 Ctrl+RightClick a macro to remove it.
 
