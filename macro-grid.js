@@ -10,6 +10,17 @@ Hooks.once("setup", async () => {
       renderMacroGrid(game.user.id);
     }
   });
+  game.settings.register("macro-grid", "leftStyle", {
+    name: `Left Style`,
+    hint: `CSS for position left. Default value is calc(50% - 257px) to center the grid.`,
+    scope: "world",
+    config: true,
+    type: String,
+    default: "calc(50% - 257px)",
+    onChange: value => { 
+      renderMacroGrid(game.user.id);
+    }
+  });
   game.settings.register('macro-grid', 'onStartup', {
     name: `Display on Startup`,
     hint: `Determines whether the macro grid shows when the page is ready`,
@@ -20,6 +31,7 @@ Hooks.once("setup", async () => {
     onChange: value => { 
     }
   });
+  
 });
 
 Hooks.on('ready', ()=>{
@@ -45,12 +57,13 @@ Hooks.on('renderHotbar', (app, html, options)=>{
 var renderMacroGrid = function(userId) {
   let m = this; 
   let user = game.users.get(userId)
-  if (!user) user = game.user;//${window.innerWidth/2-257}px
+  if (!user) user = game.user;//${window.innerWidth/2-257}px //50%; transform: translate(-50%, 0%)
   let html=`<div id="macro-manager">
   <style>
   #hotbar{display:none;}
   #macro-manager {border: 1px solid var(--color-border-dark);border-radius: 5px; background-image: url(../ui/denim075.png); z-index: 100; 
-  width: 514px ; height: 292px; padding: .5em; color: white; position: absolute; bottom: ${game.settings.get("macro-grid", "bottomOffset")}px; left: 50%; transform: translate(-50%, 0%); box-shadow: 0 0 20px var(--color-shadow-dark);}
+  width: 514px ; height: 292px; padding: .5em; color: white; position: absolute; bottom: ${game.settings.get("macro-grid", "bottomOffset")}px; 
+  left: ${game.settings.get("macro-grid", "leftStyle")}; box-shadow: 0 0 20px var(--color-shadow-dark);}
   #macro-manager * select.user-select { border: 1px solid var(--color-border-dark);color: white;}
   #macro-manager * select.user-select * { background: #111;}
   div.faux-hotbar-macro {border: 1px solid var(--color-border-dark) ;}
