@@ -231,7 +231,7 @@ var renderMacroGrid = function(userId) {
         
       }
       header.find('a.popout').click(function(){
-        let popout = window.open(`${window.location.origin}/modules/macro-grid/macro-grid.html`, "hello", "width=500,height=250,location=no,directories=0")
+        let popout = window.open(`${window.location.origin}/modules/macro-grid/macro-grid.html`, "", "width=500,height=270,location=no,directories=0")
         let renderHotbarHook = Hooks.on('renderHotbar', (app)=>{
           if (popout.closed) return Hooks.off('renderHotbar', renderHotbarHook)
           let hotbar = Object.entries(user.hotbar).reduce((a, [k,v])=>{

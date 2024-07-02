@@ -5,7 +5,7 @@
   "title": "Macro Grid",
   "description": "Grid for managing macro hotbars of all users",
   "authors": [{"name":"Xaukael"}],
-  "version": "2.0.0",
+  "version": "2.0.1",
 	"socket": true,
   "compatibility": {
       "minimum": "10",
