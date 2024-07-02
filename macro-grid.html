@@ -1,0 +1,153 @@
+<html>
+  <head>
+  <title>Macro Grid</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+      let page = 1;
+      let userId
+      let logged
+      sendHotbar = function() {
+        let grid = $(document).find('div.grid')
+        let hotbar = [...grid.find('a.content-link')].reduce((a, link)=>{
+          a[link.parentElement.dataset.slot] = link.dataset.id 
+          return a
+        },{})
+        window.opener.postMessage({type:"update", hotbar, userId}, '*');
+      }
+      loadGrid = function() {
+        let grid = $(document).find('div.grid')
+        for (let b = 50; b > 0; b-=10) 
+            for (let i = 1; i <= 10; i++) 
+              grid.append(`<div data-slot="${b-10+i}" class="slot"></div>`)
+        
+        window.addEventListener("message", listenForHotbarUpdates, false)
+        window.opener.postMessage({type:"get"}, '*');
+        grid.find('.slot').on("dragover", function(e){e.preventDefault();})
+        grid.find('.slot').on("drop", function(e){
+          e.preventDefault()
+          let dropped = JSON.parse(e.originalEvent.dataTransfer.getData("text"))
+          if (dropped.type != 'Macro') return
+          let link = $(this).find('a.content-link')
+          let replace
+          if (link.length) {
+            replace = prompt('there is already a macro in this slot. Replace it?', "YES")
+            if (replace != "YES") return
+          }
+          if (dropped.uuid) $(this).append(`<a class="content-link" draggable="true" data-id="${dropped.uuid.split('.').at(-1)}" ></a>`)
+          else $(this).append(grid.find(`a[data-id="${dropped.id}"]`))
+          sendHotbar()
+        }).click(function(){
+          let a = $(this).find('a')
+          if (a.length) return window.opener.postMessage({type: "execute", id: a.data('id')}, '*');
+          else window.opener.postMessage({type: "new", slot: this.dataset.slot, userId}, '*');
+          
+        }).contextmenu(function(e){
+          e.preventDefault()
+          let a = $(this).find('a')
+          if (e.ctrlKey && a.length) {
+            a.remove()
+            sendHotbar()
+            return
+          }
+          if (a.length) window.opener.postMessage({type: "edit", id: a.data('id')}, '*');
+        })
+        grid.off('wheel')
+        grid.mouseleave(function(){
+            let tooltip = grid.parent().find('#tooltip')
+            tooltip.css({display: 'none'})
+        })
+        $(document).find('html').on('wheel', function(we){
+         
+          if (we.shiftKey) {
+            let scale = parseFloat(grid[0].style.transform.split('(').at(-1)) || 1
+            scale = we.originalEvent.wheelDelta>0?scale+.1:scale-.1
+            grid.css('transform', `scale(${scale})`);
+            grid.parent().find('#tooltip').css('font-size', `${16*scale}px`);
+            return 
+          }
+          page = we.originalEvent.wheelDelta>0?page+1:page-1
+          if (page == 0) page = 5
+          if (page == 6) page = 1
+          if (!logged) {
+            console.log(logged, page)
+            grid.find('.hotkey').remove()
+            for (i=1; i<=10; i++)
+              grid.find(`[data-slot="${page*10+i-10}"]`).append(`<small class="hotkey">${i>9?0:i}</small>`)
+            return
+          }
+          window.opener.postMessage({type:"page", page}, '*');
+        })
+        
+      }
+      listenForHotbarUpdates = function(e) {
+        
+        userId = e.data.user.id
+        logged = e.data.user.logged
+        if (logged)
+          page = e.data.page
+        let html = $(document)
+        html.find('title').text(`${e.data.user.name} Macros`)
+        html.find(`div.slot`).html('')
+        
+        for (const [slot, macro] of Object.entries(e.data.hotbar)) {
+          let $a = $(`<a class="content-link" draggable="true" data-id="${macro.id}" data-type="Macro" data-tooltip="${macro.name}" ><img src="${window.location.origin + '/' + macro.img}"></a>`)
+
+          $a.bind('dragstart',function(e){
+            e.originalEvent.dataTransfer.setData("text/plain", JSON.stringify(this.dataset))
+          })
+          html.find('div.slot').mouseenter(function(){
+            let link = $(this).find('a')
+            let tooltip = $(html).find('#tooltip')
+            let position = this.getBoundingClientRect();
+            if (!link.length) return tooltip.css({display: 'none'})
+            tooltip.text(link.data("tooltip"));
+            tooltip.css({display: 'block', left: position.left+position.width/2, top: position.bottom})
+          })
+          
+          html.find(`div[data-slot=${slot}]`).append($a)
+        }
+        
+        for (i=1; i<=10; i++)
+          html.find(`[data-slot="${page*10+i-10}"]`).append(`<small class="hotkey">${i>9?0:i}</small>`)
+        
+       
+        
+      }
+      hotkey = function(e) {
+        if (!"1234567890".split('').includes(e.key)) return
+        $(document).find(`.hotkey:contains(${e.key})`).parent().find('a').trigger('click')
+      }
+    </script>
+  </head>
+  <body onload="loadGrid()" onkeydown="hotkey(event)">
+
+    <style>
+      body{ background: url(../../ui/denim075.png) repeat; }
+      #hotbar {position: relative !important; bottom: -999px}
+      .grid {display: grid; transform-origin: top center; grid-template-columns: repeat(10, 40px);margin: auto;width: max-content;height: max-content;}
+      .grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
+      .grid > div > a.content-link > img { border: unset; box-sizing:border-box;  max-width: 100%;}
+      .grid > div { position: relative; border:1px solid #000000; height: 40px; cursor:pointer; border-radius: 2px;}
+      .grid > div:hover { border:1px solid #ff5f00; box-shadow: 0 0 10px #ff5f00 inset;}
+      .grid > div > small {opacity: .75; font-size: 12px;color: white; pointer-events: none; position: absolute; top: 0px; right: 0px; padding: 0px 3px 0px 3px; text-align: right; background: #111 !important; font-family: "Signika", sans-serif; }
+      a#taskbar-macro-grid  {opacity: 100%}
+      #tooltip {text-align: center;  position: absolute;
+        width: max-content;
+        max-width: 320px;
+        padding: 6px 8px;
+        background: rgba(0, 0, 0, 0.95);
+        font-family: "Signika", sans-serif;
+        font-size: 16px;
+        color: white;
+        border-radius: 3px;
+        transform: translateX(-50%);
+        box-shadow: 0 0 4px #000;
+        z-index: var(--z-index-tooltip);
+        pointer-events: none;
+        overflow-wrap: break-word;
+        transition: visibility 0s 50ms, opacity 50ms;
+    </style>
+    <div class="grid"></div>
+     <aside id="tooltip" role="tooltip" style="display:none; position: absolute;" class=""></aside>
+  </body>
+</html>left

@@ -1,7 +1,55 @@
 Hooks.once("setup", async () => {
+  game.settings.register('macro-grid', 'onStartup', {
+    name: `Display on Startup`,
+    hint: `Determines whether the macro grid shows when the page is ready`,
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+  game.settings.register("macro-grid", "gridSize", {
+    name: `Grid Size`,
+    hint: `Size in pixels for the grid squares.`,
+    scope: "client",
+    config: true,
+    type: Number,
+    default: 40,
+    onChange: value => { 
+      Object.values(ui.windows).filter(w=>w.id.startsWith('macro-grid')).forEach(function(w){
+        renderMacroGrid(w.id.split('-').at(-1))
+      })
+    }
+  });
+  game.settings.register("macro-grid", "gridColor", {
+    name: `Grid Color`,
+    hint: `CSS color for grid borders.`,
+    scope: "client",
+    config: true,
+    type: String,
+    default: "rgba(0,0,0,0.5)",
+    onChange: value => { 
+      Object.values(ui.windows).filter(w=>w.id.startsWith('macro-grid')).forEach(function(w){
+        renderMacroGrid(w.id.split('-').at(-1))
+      })
+    }
+  });
+  game.settings.register("macro-grid", "barMode", {
+    name: `Grid Color`,
+    hint: `CSS color for grid borders.`,
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false,
+    
+    onChange: value => { 
+      Object.values(ui.windows).filter(w=>w.id.startsWith('macro-grid')).forEach(function(w){
+        renderMacroGrid(w.id.split('-').at(-1))
+      })
+    }
+  });
   game.settings.register("macro-grid", "bottomOffset", {
     name: `Bottom Offset`,
-    hint: `Distance in pixels the grid will be from the bottom of the screen`,
+    hint: `Distance in pixels the grid will be from the bottom of the screen.`,
     scope: "world",
     config: true,
     type: Number,
@@ -10,195 +58,296 @@ Hooks.once("setup", async () => {
       renderMacroGrid(game.user.id);
     }
   });
-  game.settings.register("macro-grid", "leftStyle", {
-    name: `Left Style`,
-    hint: `CSS for position left. Default value is calc(50% - 257px) to center the grid.`,
-    scope: "world",
-    config: true,
-    type: String,
-    default: "calc(50% - 257px)",
-    onChange: value => { 
-      renderMacroGrid(game.user.id);
-    }
-  });
-  game.settings.register('macro-grid', 'onStartup', {
-    name: `Display on Startup`,
-    hint: `Determines whether the macro grid shows when the page is ready`,
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: false,
-    onChange: value => { 
-    }
-  });
-  
+
 });
 
 Hooks.on('ready', ()=>{
   if(game.settings.get("macro-grid", "onStartup")) renderMacroGrid(game.user.id);
 })
 
-
-Hooks.on('renderHotbar', (app, html, options)=>{
-  html.on('wheel', function(e){
-    if (e.originalEvent.wheelDelta>0)
-      html.find('.page-control')[0].click()
-    else
-      html.find('.page-control')[1].click()
+Hooks.on('getUserContextOptions', (players, options)=>{
+  options.push({
+    name: "Macros",
+    icon: '<i class="fas fa-code"></i>',
+    callback: (li)=>{
+      renderMacroGrid(li.data("userId"))
+    },
+    condition: (li)=>{
+      return game.user.isGM || li.data("userId") == game.user.id
+    }
   })
-  let userId = $('#macro-manager').find('select.user-select').val();
-  if (!userId) userId = game.user.id;
-  let activePage = +html.find('#macro-list').data().page;
-  html.find('span.page-number').html($(`<a>${activePage}</a>`).click(()=>{renderMacroGrid(userId);}))
-  if (!$('#macro-manager').length) return;
-  renderMacroGrid(userId);
 })
 
+
+
 var renderMacroGrid = function(userId) {
-  let m = this; 
+  let id = `macro-grid-${userId}`
+  
+  let w = Object.values(ui.windows).find(w=>w.id==id)
+  if (w)  w.setPosition({})
+  let size = game.settings.get("macro-grid", "gridSize")
+  let barMode = game.settings.get("macro-grid", "barMode");
+  let height = size*5 + size/10*4 + 128
+  if (barMode) height = size*1 + 75
+  let fromBottom = game.settings.get("macro-grid", "bottomOffset")
+  let activePage = +$('#macro-list').data().page
   let user = game.users.get(userId)
-  if (!user) user = game.user;//${window.innerWidth/2-257}px //50%; transform: translate(-50%, 0%)
-  let html=`<div id="macro-manager">
-  <style>
-  #hotbar{display:none;}
-  #macro-manager {border: 1px solid var(--color-border-dark);border-radius: 5px; background-image: url(../ui/denim075.png); z-index: 100; 
-  width: 514px ; height: 292px; padding: .5em; color: white; position: absolute; bottom: ${game.settings.get("macro-grid", "bottomOffset")}px; 
-  left: ${game.settings.get("macro-grid", "leftStyle")}; box-shadow: 0 0 20px var(--color-shadow-dark);}
-  #macro-manager * select.user-select { border: 1px solid var(--color-border-dark);color: white;}
-  #macro-manager * select.user-select * { background: #111;}
-  div.faux-hotbar-macro {border: 1px solid var(--color-border-dark) ;}
-  div.faux-hotbar-macro:hover { border: 1px solid #ff6400;}
-  img.faux-macro-img { margin: 1px 0px 0px 1px; width: 44px;  height: 44px;  object-fit: cover;  object-position: 50% 50%; opacity: 1.0; border: unset !important; border: 1px solid #fff; }
-  div.faux-hotbar-macro {  height: 48px; width: 48px;  border-radius: 5px;  position: relative;  flex: 0 0 50px;  height: 48px;  border: 1px solid #000;  border-radius: 3px;  cursor: pointer; }
-  div.faux-hotbar-macro > .tooltip {  display: block;  min-width: 148px;  height: 26px;  padding: 2px 4px;  position: absolute; top: -32px;  left: -50px;  background: rgba(0, 0, 0, 0.9);  border: 1px solid var(--color-border-dark-primary);  border-radius: 3px;  color: var(--color-text-light-highlight); line-height: 22px;  text-align: center;  white-space: nowrap;  word-break: break-all; background-color: #111 !important;}
-  div.faux-hotbar-macro > small {position: relative; bottom: 50px; left: 2px; padding: 0px 3px 0px 3px; text-align: right; background-color: #111 !important; ${game.user.id==user.id?'':'display:none;'}}
-  center.controls{width: 100%;}
-  center.controls > a {border: 1px solid var(--color-border-dark); border-radius: 3px;
-      padding: 4px 3px; width: 2em;}
-  center.controls > a.directory {float: left; }
-  center.controls > a.close {float: right; }
-  center.controls > a.page-control {margin: 0 .25em; }
-  </style>
-  <div class="macro-grid" style="width:100%; display: grid; grid-template-columns: repeat(10, 50px);  row-gap:1px; column-gap:0px; margin: 0 0 .5em 0" id="macro-set-grid">`;
-  //transform: translate(-50%, 0%); margin:-5px 0 .5em 0;
-  let activePage = +$('#macro-list').data().page;
-  for (let b = 50; b > 0; b-=10) 
-    for (let i = 1; i <= 10; i++) 
-      html += `<div class="faux-hotbar-macro" id="hotbar-macro-${b-10+i}" data-slot="${b-10+i}" draggable="true">
-                    <img  class="faux-macro-img" width="46" height="46" src="./ui/denim075.png" style="opacity: 0;">
-                    ${activePage==Math.floor(b/10)?`<small style="background-color: #222;">${i>9?0:i}</small>`:''}
-                  </div>
-                  `;
-  html += `</div><center class="controls"><select class="user-select">${game.user.isGM?game.users.contents.reduce((a, u)=> a+=`<option value="${u.id}">${u.name}</option>`, ``):`<option value="${game.user.id}">${game.user.name}</option>`}</select></center></div>`;//
+  let rendered = !!w;
+  let content = `
+      <style>
+      #hotbar {position: relative !important; bottom: -999px}
+      .grid { display: grid; grid-template-columns: repeat(10, ${size}px); gap: ${size/10}px;}/**/
+      .grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
+      .grid > div > a.content-link > img { border: unset; }
+      .grid > div { position: relative; border:1px solid ${game.settings.get("macro-grid", "gridColor")}; height: ${size}px; cursor:pointer; border-radius: ${size/20}px;}
+      .grid > div:hover { border:1px solid var(--color-shadow-highlight); box-shadow: 0 0 ${Math.floor(size/5)}px var(--color-shadow-highlight) inset;}
+      .grid > div > small {opacity: .75; font-size: ${size/4}px;color: var(--color-text-light-highlight); pointer-events: none; position: absolute; top: 0px; right: 0px; padding: 0px ${size/12}px 0px ${size/12}px; text-align: right; background: #111 !important; }
+      a#taskbar-macro-grid  {opacity: 100%}
+      .user-select > option {  color: var(--color-text-light-highlight);  background: #111 !important; }
+      </style><div class="grid"></div>`
 
-  html = $(html);
+  let d = new Dialog({title:'Macro Grid', content, buttons:{},
+    render: async (html)=>{
+      html[0].parentElement.style.background="unset"
+      html.find('.hotkey').remove()
+      let grid = html.find('div.grid')
+      for (let b = 50; b > 0; b-=10) 
+          for (let i = 1; i <= 10; i++) 
+            grid.append(`<div data-slot="${b-10+i}" class="slot"></div>`)
       
-  html.find(".user-select").before($(`<a class="page-control" data-action="page-up" data-tooltip="MACRO.PageUp" alt="Previous Hotbar Page">
-            <i class="fas fa-angle-up"></i></a>`).click(function(){
-    $('#hotbar-page-controls > .page-control')[0].click()
-  }))
-  html.find(".user-select").after($(`<a class="page-control" data-action="page-down" data-tooltip="MACRO.PageDown" alt="Next Hotbar Page" aria-describedby="tooltip" style="padding-left: 0px">
-            <i class="fas fa-angle-down" ></i>
-        </a>`).click(function(){
-    $('#hotbar-page-controls > .page-control')[1].click()
-  }))
-  html.find('.controls').prepend($(`<a class="directory"><i class="fas fa-folder"></i></a>`).click(function(){game.macros.directory.renderPopout()}));
-  html.find('.controls').append($(`<a class="close"><i class="fas fa-times"></i></a>`).click(function(){$('#macro-manager').remove()}));
-  html.find('select.user-select').val(user.id);
-  html.find('select.user-select').change(function(e){
-    renderMacroGrid($(this).val());
-  })
-
-  html.find('select.user-select').on('wheel', function(e){
-    let change = e.originalEvent.wheelDelta>0?-1:1
-    let option = $(this).children()[this.selectedIndex+change];
-    if (!option) return;
-    option.selected = true;
-    $(this).trigger('change');
-  })
-  for (const [slot, id] of Object.entries(user.hotbar)) {
-    let macro = game.macros.get(id);
-    if (!macro) continue;
-    html.find(`div#hotbar-macro-${slot}`).attr("data-id", macro.id);;
-    html.find(`div#hotbar-macro-${slot}`).attr("name", macro.name);
-    html.find(`div#hotbar-macro-${slot} > img`)
-      .replaceWith(`<img  class="faux-macro-img" width="46" height="46" src="${macro.img}" draggable="true">`)
-  }
-  html.find(`div.faux-hotbar-macro`).click(async function(e){
-    let macro =  game.macros.get($(this).data().id);
-    if (macro)  macro.execute();
-    else {
-      macro = await Macro.create({name: "New Macro", type: "script"})
-      macro.sheet.render(true);
-      await user.assignHotbarMacro(macro, $(this).data().slot)
-      renderMacroGrid(user.id);
-    }
-  });
-  html.find(`div.faux-hotbar-macro`).contextmenu(async function(e){
-    let macro =  game.macros.get($(this).data().id);
-    if (e.ctrlKey&&e.shiftKey) {
-      const update = foundry.utils.deepClone(user.hotbar);
-      let doDelete = await Dialog.wait({
-        title: "Delete this macro?",
-        content: `<center><p>${macro.name}</p><center>`,
-        buttons: {
-          yes: {label: "Delete", callback:()=>{return true}},
-          no: {label: "Keep", callback:()=>{return false}}
-        },
-        close:()=>{return false}
+      let activePage = ui.hotbar.page;
+      if (game.user.id==user.id)
+        for (i=1; i<=10; i++)
+          html.find(`[data-slot="${activePage*10+i-10}"]`).append(`<small class="hotkey">${i>9?0:i}</small>`)
+  
+      if (game.settings.get('macro-grid', 'barMode')) {
+        html.find('div.slot').hide()
+        html.find('small.hotkey').each(function(){
+          $(this).parent().show()
+        })
+      } 
+      for (const [slot, id] of Object.entries(user.hotbar)) {
+        let macro = game.macros.get(id)
+        if (!macro) continue;
+        let anchor = await TextEditor.enrichHTML(macro.link, {async:false})
+        let $a = $(anchor)
+        $a[0].dataset.tooltip = macro.name
+        //$a[0].title = macro.name
+        $a.html(`<img src="${macro.img}">`)
+        $a.contextmenu(async function(e){
+          let macro = fromUuidSync(this.dataset.uuid)
+          if (e.ctrlKey&&e.shiftKey) {
+            let update = foundry.utils.deepClone(user.hotbar)
+            let doDelete = await Dialog.wait({
+              title: `Delete macro: ${macro.name}?`,
+              content: ``,
+              buttons: {
+                yes: {label: "Delete", callback:()=>{return true}},
+                no: {label: "Keep", callback:()=>{return false}}
+              },
+              close:()=>{return false}
+            });
+            if (!doDelete) return;
+            await macro.delete()
+            delete update[this.parentElement.dataset.slot]
+            await  user.update({hotbar: update}, {diff: false, recursive: false, noHook: true})
+            return this.remove()
+          }
+          if (e.ctrlKey) {
+            let update = foundry.utils.deepClone(user.hotbar)
+            delete update[this.parentElement.dataset.slot]
+            await  user.update({hotbar: update}, {diff: false, recursive: false, noHook: true})
+            return this.remove()
+          }
+          if (macro)  macro.sheet.render(true)
+        })
+        html.find(`div[data-slot=${slot}]`).append($a)
+      }
+  
+      html.find(`div.slot`).click(async function(e){
+        if (this.children.length) return;
+        macro = await Macro.create({name: "New Macro", type: "script"})
+        macro.sheet.render(true);
+        await user.assignHotbarMacro(macro, $(this).data().slot)
       });
-      if (!doDelete) return;
-      await macro.delete();
-      delete update[$(this).data().slot];
-      await  user.update({hotbar: update}, {diff: false, recursive: false, noHook: true});
-      return renderMacroGrid(user.id);
-    }
-    if (e.ctrlKey) {
-      const update = foundry.utils.deepClone(user.hotbar);
-      delete update[$(this).data().slot];
-      await  user.update({hotbar: update}, {diff: false, recursive: false, noHook: true});
-      return renderMacroGrid(user.id);
-    }
-    if (macro)  macro.sheet.render(true);
-  });
-  html.find(`div.faux-hotbar-macro > img`).bind("dragstart", function(e) {
-    if (!$(this).parent().data()) return;
-    e.originalEvent.dataTransfer.setData("text", JSON.stringify({type:"Macro", uuid:"Macro."+ $(this).parent().data().id, originSlot: +$(this).parent().data().slot}));
-    e.originalEvent.dataTransfer.effectAllowed = "copy";
-    $(this).parent().find('.tooltip').remove();
-  });
-  html.find(`div.faux-hotbar-macro`).bind("drop", async function(e) {
-    e.originalEvent.preventDefault();
-    if ($(this).data().id) return ui.notifications.warn('there is already a macro in this slot')
-    let dropped = JSON.parse(e.originalEvent.dataTransfer.getData("text"));
-    if (dropped.type != 'Macro') return;
-    let id = dropped.uuid.split('.')[1];
-    if (id=='undefined') return;
-    let macro = game.macros.get(id);
-    if (!macro.ownership[user.id]) {
-      let ownership = foundry.utils.deepClone(macro.ownership);
-      ownership[user.id] = 2;
-      await macro.update({ownership});
-    }
-    let slot = +$(this).data().slot;
-    let fromSlot = dropped.originSlot?dropped.originSlot:null;
-    await user.assignHotbarMacro(macro, slot, {fromSlot})
-    renderMacroGrid(user.id);
-  });
-  html.find(`div.faux-hotbar-macro`).hover( 
-  function(e){
-      if($(this).attr('name')) $(this).append(`<span class="tooltip">${$(this).attr('name')}</span>`);
-  }, 
-  function(e){
-      $(this).find('.tooltip').remove();
-  });
-  html.find('div.macro-grid').on('wheel', function(e){
-      if (e.originalEvent.wheelDelta>0)
-        html.find('.page-control')[0].click()
-      else
-        html.find('.page-control')[1].click()
-    })
-  if ($('#macro-manager').length) $('#macro-manager').replaceWith(html);
-  else $('body').append(html)
+        
+      html.find(`div.slot`).bind("drop", async function(e) {
+        e.originalEvent.preventDefault()
+        let link = $(this).find('a.content-link')
+        //let existing 
+        //console.log(link, !link.length, !!link.length)
+        if (link.length) return ui.notifications.warn('there is already a macro in this slot')
+          //existing = Macro.get(link.data("id"))
+        
+        let dropped = JSON.parse(e.originalEvent.dataTransfer.getData("text"))
+        if (dropped.type != 'Macro') return
+        let macro = await fromUuid(dropped.uuid)
+        //console.log(macro)
+        if (!macro) return;
+        if (dropped.uuid.startsWith('Compendium')) 
+          macro = await Macro.create(macro)
+          
+        if (!macro.ownership[user.id] && game.user.isGM) {
+          let ownership = foundry.utils.deepClone(macro.ownership)
+          ownership[user.id] = 1
+          await macro.update({ownership})
+        }
+        let slot = Number(this.dataset.slot);
+        let fromSlot = Object.entries(user.hotbar).find(([k,v])=>v==macro.id)?.at(0)||null
+        await user.assignHotbarMacro(macro, slot, {fromSlot})
+        //if (existing) await user.assignHotbarMacro(existing, fromSlot, {fromSlot:slot})
+      })
+      if (game.user.id == user.id)
+      html.find('.grid').on('wheel', function(e){
+        if (game.user.id != userId) return;
+        let page = e.originalEvent.wheelDelta>0?activePage+1:activePage-1
+        if (page == 0) page = 5
+        if (page == 6) page = 1
+        ui.hotbar.changePage(page)
+      })
+      header = html.closest('.app').find('header')
+      let title = header.find('.window-title')
+      title.text(user.name + " Macros")
+  
+      if (game.user.id == user.id) {
+        header.find('.page-control').show()
+        header.find('a.page-number').remove()
+        header.find('a.page-control[data-action="page-up"]').after(`<a class="page-number" style="width: 1em;text-align: center;"><i class="fa-solid fa-${ui.hotbar.page}"></i></a>`)
+      } else header.find('.page-control').hide()
+      
+      
+      if (rendered) return;
+      title.parent().dblclick(function(e){e.preventDefault(); e.stopPropagation() })
+      title.after(`<a class="popout" data-tooltip="Pop Out"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`)
+      title.after('<a class="info" data-tooltip="LClick to execute <br> RClick to edit <br> Shift+RClick to remove <br> Ctrl+Shift+RClick to prompt delete<br>Wheel over grid to change page"><i class="fa-solid fa-circle-info"></i></a>')
+      title.after(`<a class="directory" data-tooltip="Macro Directory"><i class="fas fa-folder"></i></a>`)
+      
+      //title.after(`<a class="refresh" data-tooltip="Refresh" ><i class="fa-solid fa-arrows-rotate"></i></a>`)
+      if (game.user.id == user.id) {
 
+        title.after(`<a class="page-control" data-action="page-down" data-tooltip="MACRO.PageDown" alt="Next Hotbar Page" aria-describedby="tooltip" ><i class="fas fa-angle-down" ></i></a>`)
+        title.after(`<a class="page-number" style="width: 1em;text-align:center;"><i class="fa-solid fa-${ui.hotbar.page}"></i></a>`)        
+        title.after( `<a class="page-control" data-action="page-up" data-tooltip="MACRO.PageUp" alt="Previous Hotbar Page" ><i class="fas fa-angle-up"></i></a>`)
+        
+      }
+      header.find('a.popout').click(function(){
+        let popout = window.open(`${window.location.origin}/modules/macro-grid/macro-grid.html`, "hello", "width=500,height=250,location=no,directories=0")
+        let renderHotbarHook = Hooks.on('renderHotbar', (app)=>{
+          if (popout.closed) return Hooks.off('renderHotbar', renderHotbarHook)
+          let hotbar = Object.entries(user.hotbar).reduce((a, [k,v])=>{
+              let m = Macro.get(v)
+              if (!m) return a
+              a[k] = {id: v, name: m.name, img: m.img}
+              return a
+            }, {})
+            let data = {
+              type: "hotbar",
+              hotbar,
+              page: app?.page || 1,
+              user: {name: user.name, id: user.id, logged: game.user.id==userId}
+            }
+            popout.postMessage(data, '*');
+        })
+        if (userId == game.user.id) return;
+        let updateUser = Hooks.on('updateUser',  (updatedUser, updates)=>{
+          if (updatedUser.id != userId) return;
+          if (!foundry.utils.hasProperty(updates, "hotbar")) return;
+          if (popout.closed) return Hooks.off('updateUser', renderHotbarHook)
+          let hotbar = Object.entries(user.hotbar).reduce((a, [k,v])=>{
+              let m = Macro.get(v)
+              if (!m) return a
+              a[k] = {id: v, name: m.name, img: m.img}
+              return a
+            }, {})
+            let data = {
+              type: "hotbar",
+              hotbar,
+              user: {name: user.name, id: user.id, logged: game.user.id==userId}
+            }
+            popout.postMessage(data, '*');
+        })
+        
+      }).dblclick(function(e){e.stopPropagation();});
+      header.find('.page-control').click(function(){
+        let page = this.dataset.action.includes("up")?ui.hotbar.page+1:ui.hotbar.page-1
+        if (page == 0) page = 5
+        if (page == 6) page = 1
+        ui.hotbar.changePage(page)
+        console.log(d)
+      }).dblclick(function(e){e.stopPropagation();});
+      
+      header.find('a.directory').click(function(){
+        Hooks.once('renderSidebarTab', (app, html, options)=>{
+          app.setPosition({top : d.position.top, left: d.position.left-app.position.width})
+        })
+        game.macros.directory.renderPopout()
+      }).dblclick(function(e){e.stopPropagation();});
+      
+      header.find('a.refresh').click(function(){
+        d.render(true)
+      }).dblclick(function(e){e.stopPropagation();});
+      
+      header.find('.window-title').dblclick(function(e){
+        e.stopPropagation();
+        if (game.user.id != user.id) return;
+       game.settings.set('macro-grid', 'barMode', !game.settings.get('macro-grid', 'barMode'))
+        d.render(true)
+        
+      });
+      rendered = true;
+    },
+    close:()=>{
+       Hooks.off('updateUser', updateUserHook)
+       Hooks.off('renderHotbar', renderHotbarHook)
+    }
+  },{resizable:false, width: 'auto', height: 'auto', id})//, top: window.innerHeight-height-fromBottom,
+
+  let updateUserHook = Hooks.on('updateUser', (updatedUser, updates)=>{
+    if (updatedUser.id != userId) return;
+    if (!foundry.utils.hasProperty(updates, "hotbar")) return;
+    d.render()
+  })
+  
+  let renderHotbarHook = Hooks.on('renderHotbar', ()=>{
+    if (game.user.id != userId) return;
+    d.render()
+  })
+  
+  Hooks.once('renderDialog', (app, html)=>{
+    console.log(window.innerHeight , parseInt(html[0].style.height) , fromBottom)
+    app.setPosition({top: window.innerHeight - parseInt(html[0].style.height) - fromBottom})
+  })
+  
+  d.render(true)
+  return d;
+  
 }
+
+window.listenForMacroEvents = async function(e) {
+  if (e.data.type == "get") {
+    Hooks.call('renderHotbar')
+  }
+  if (e.data.type == "execute") {
+    Macro.get(e.data.id).execute()
+  }
+  if (e.data.type == "edit") {
+    Macro.get(e.data.id).sheet.render(true)
+  }
+  if (e.data.type == "update") {
+    let user = User.get(e.data.userId)
+    user.update({hotbar: e.data.hotbar}, {diff: false, recursive: false, noHook: true})
+  }
+  if (e.data.type == "page") {
+    ui.hotbar.changePage(e.data.page)
+  }
+  if (e.data.type == "new") {
+    let user = User.get(e.data.userId)
+    //let macro = 
+      await Macro.create({name: "New Macro", type: "script"}).then(m=>m.sheet.render(true))
+    //macro.sheet.render(true);
+    await user.assignHotbarMacro(macro, e.data.slot)
+  }
+  
+}
+
+window.addEventListener("message", window.listenForMacroEvents, false)
