@@ -98,7 +98,7 @@ var renderMacroGrid = function(userId) {
       #hotbar {position: relative !important; bottom: -999px}
       .grid { display: grid; grid-template-columns: repeat(10, ${size}px); gap: ${size/10}px;}/**/
       .grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
-      .grid > div > a.content-link > img { border: unset; }
+      .grid > div > a.content-link > img { border: unset; height: ${size-size/20}px; width: ${size-size/20}px;}
       .grid > div { position: relative; border:1px solid ${game.settings.get("macro-grid", "gridColor")}; height: ${size}px; cursor:pointer; border-radius: ${size/20}px;}
       .grid > div:hover { border:1px solid var(--color-shadow-highlight); box-shadow: 0 0 ${Math.floor(size/5)}px var(--color-shadow-highlight) inset;}
       .grid > div > small {opacity: .75; font-size: ${size/4}px;color: var(--color-text-light-highlight); pointer-events: none; position: absolute; top: 0px; right: 0px; padding: 0px ${size/12}px 0px ${size/12}px; text-align: right; background: #111 !important; }
