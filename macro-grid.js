@@ -171,8 +171,10 @@ var renderMacroGrid = function(userId) {
         await user.assignHotbarMacro(macro, $(this).data().slot)
       });
         
-      html.find(`div.slot`).bind("drop", async function(e) {
+      html.find(`div.slot`).bind('drop', async function(e) {
         e.originalEvent.preventDefault()
+      
+        let slot = Number(this.dataset.slot);
         let link = $(this).find('a.content-link')
         //let existing 
         //console.log(link, !link.length, !!link.length)
@@ -180,22 +182,39 @@ var renderMacroGrid = function(userId) {
           //existing = Macro.get(link.data("id"))
         
         let dropped = JSON.parse(e.originalEvent.dataTransfer.getData("text"))
-        if (dropped.type != 'Macro') return
-        let macro = await fromUuid(dropped.uuid)
-        //console.log(macro)
-        if (!macro) return;
-        if (dropped.uuid.startsWith('Compendium')) 
-          macro = await Macro.create(macro)
+        console.log(dropped)
+        if (dropped.type == 'Macro') {
+          let macro = await fromUuid(dropped.uuid)
+          //console.log(macro)
+          if (!macro) return;
+          if (dropped.uuid.startsWith('Compendium')) 
+            macro = await Macro.create(macro)
+            
+          if (!macro.ownership[user.id] && game.user.isGM) {
+            let ownership = foundry.utils.deepClone(macro.ownership)
+            ownership[user.id] = 1
+            await macro.update({ownership})
+          }
           
-        if (!macro.ownership[user.id] && game.user.isGM) {
-          let ownership = foundry.utils.deepClone(macro.ownership)
-          ownership[user.id] = 1
-          await macro.update({ownership})
+          let fromSlot = Object.entries(user.hotbar).find(([k,v])=>v==macro.id)?.at(0)||null
+          await user.assignHotbarMacro(macro, slot, {fromSlot})
+          return;
+          //if (existing) await user.assignHotbarMacro(existing, fromSlot, {fromSlot:slot})
         }
-        let slot = Number(this.dataset.slot);
-        let fromSlot = Object.entries(user.hotbar).find(([k,v])=>v==macro.id)?.at(0)||null
-        await user.assignHotbarMacro(macro, slot, {fromSlot})
-        //if (existing) await user.assignHotbarMacro(existing, fromSlot, {fromSlot:slot})
+        if (dropped.type != 'Macro') {
+          let document = await fromUuid(dropped.uuid)
+          let macro = await Macro.create({
+            type: "script",
+            name: document.name,
+            img: document.img,
+            command: `Hotbar.toggleDocumentSheet("${document.uuid}")`,
+            ownership: {[`${user.id}`]:3}
+          })
+          
+          let fromSlot = null
+          await user.assignHotbarMacro(macro, slot, {fromSlot})
+          return
+        }
       })
       if (game.user.id == user.id)
       html.find('.grid').on('wheel', function(e){
