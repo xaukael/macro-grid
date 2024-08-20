@@ -95,7 +95,7 @@ var renderMacroGrid = function(userId) {
   let rendered = !!w;
   let content = `
       <style>
-      #hotbar {position: relative !important; bottom: -999px}
+      #hotbar {display: none;}
       .grid { display: grid; grid-template-columns: repeat(10, ${size}px); gap: ${size/10}px;}/**/
       .grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
       .grid > div > a.content-link > img { border: unset; height: ${size-size/20}px; width: ${size-size/20}px;}
