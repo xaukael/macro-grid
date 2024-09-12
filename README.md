@@ -2,7 +2,7 @@
 
 Grid for managing macro hotbars of all users.
 
-Click the page number of the hotbar to show the Grid.
+Open grid through Players context menu.
 
 LeftClick a macro to execute it.
 
