@@ -136,7 +136,7 @@ var renderMacroGrid = function(userId) {
         $a.html(`<img src="${macro.img}">`)
         $a.contextmenu(async function(e){
           let macro = fromUuidSync(this.dataset.uuid)
-          if (e.ctrlKey&&e.shiftKey) {
+          if (e.shiftKey) {
             let update = foundry.utils.deepClone(user.hotbar)
             let doDelete = await Dialog.wait({
               title: `Delete macro: ${macro.name}?`,
@@ -238,7 +238,7 @@ var renderMacroGrid = function(userId) {
       if (rendered) return;
       title.parent().dblclick(function(e){e.preventDefault(); e.stopPropagation() })
       title.after(`<a class="popout" data-tooltip="Pop Out"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`)
-      title.after('<a class="info" data-tooltip="LClick to execute <br> RClick to edit <br> Shift+RClick to remove <br> Ctrl+Shift+RClick to prompt delete<br>Wheel over grid to change page"><i class="fa-solid fa-circle-info"></i></a>')
+      title.after('<a class="info" data-tooltip="LClick to execute <br> RClick to edit <br> Ctrl+RClick to remove <br> Shift+RClick to prompt delete<br>Wheel over grid to change page"><i class="fa-solid fa-circle-info"></i></a>')
       title.after(`<a class="directory" data-tooltip="Macro Directory"><i class="fas fa-folder"></i></a>`)
       
       //title.after(`<a class="refresh" data-tooltip="Refresh" ><i class="fa-solid fa-arrows-rotate"></i></a>`)
