@@ -10,7 +10,7 @@ RightClick a macro to edit it.
 
 Ctrl+RightClick a macro to remove it.
 
-Ctrl+Shift+RightClick a macro to delete it.
+Shift+RightClick a macro to delete it.
 
 The position of the grid can be customized in the module settings.
 
