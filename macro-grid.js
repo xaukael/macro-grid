@@ -70,10 +70,10 @@ Hooks.on('getUserContextOptions', (players, options)=>{
     name: "Macros",
     icon: '<i class="fas fa-code"></i>',
     callback: (li)=>{
-      renderMacroGrid(li.data("userId"))
+      renderMacroGrid(li.dataset.userId)
     },
     condition: (li)=>{
-      return game.user.isGM || li.data("userId") == game.user.id
+      return game.user.isGM || li.dataset.userId == game.user.id
     }
   })
 })
@@ -81,16 +81,20 @@ Hooks.on('getUserContextOptions', (players, options)=>{
 
 
 var renderMacroGrid = function(userId) {
+  console.log("macro grid",userId)
+  if (!userId) userId = game.user.id
   let id = `macro-grid-${userId}`
   
   let w = Object.values(ui.windows).find(w=>w.id==id)
   if (w)  w.setPosition({})
   let size = game.settings.get("macro-grid", "gridSize")
-  let barMode = game.settings.get("macro-grid", "barMode");
+  let barMode = game.settings.get("macro-grid", "barMode")
+  if (game.user.id != userId) barMode = false
+  console.log(barMode)
   let height = size*5 + size/10*4 + 128
   if (barMode) height = size*1 + 75
   let fromBottom = game.settings.get("macro-grid", "bottomOffset")
-  let activePage = +$('#macro-list').data().page
+  let activePage = ui.hotbar.page//+$('#macro-list').data().page
   let user = game.users.get(userId)
   let rendered = !!w;
   let content = `
@@ -120,7 +124,7 @@ var renderMacroGrid = function(userId) {
         for (i=1; i<=10; i++)
           html.find(`[data-slot="${activePage*10+i-10}"]`).append(`<small class="hotkey">${i>9?0:i}</small>`)
   
-      if (game.settings.get('macro-grid', 'barMode')) {
+      if (game.settings.get('macro-grid', 'barMode') && game.user.id == userId) {
         html.find('div.slot').hide()
         html.find('small.hotkey').each(function(){
           $(this).parent().show()
@@ -165,7 +169,7 @@ var renderMacroGrid = function(userId) {
       }
   
       html.find(`div.slot`).click(async function(e){
-        if (this.children.length) return;
+        if (Array.from(this.children).find(e=>e.nodeName=='A')) return;
         macro = await Macro.create({name: "New Macro", type: "script"})
         macro.sheet.render(true);
         await user.assignHotbarMacro(macro, $(this).data().slot)
@@ -239,7 +243,7 @@ var renderMacroGrid = function(userId) {
       title.parent().dblclick(function(e){e.preventDefault(); e.stopPropagation() })
       title.after(`<a class="popout" data-tooltip="Pop Out"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`)
       title.after('<a class="info" data-tooltip="LClick to execute <br> RClick to edit <br> Ctrl+RClick to remove <br> Shift+RClick to prompt delete<br>Wheel over grid to change page"><i class="fa-solid fa-circle-info"></i></a>')
-      title.after(`<a class="directory" data-tooltip="Macro Directory"><i class="fas fa-folder"></i></a>`)
+      title.after(`<a class="directory" data-tooltip="Macro Directory" ><i style="color:white !important"class="fas fa-folder"></i></a>`)
       
       //title.after(`<a class="refresh" data-tooltip="Refresh" ><i class="fa-solid fa-arrows-rotate"></i></a>`)
       if (game.user.id == user.id) {
