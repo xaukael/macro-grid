@@ -70,7 +70,8 @@ Hooks.on('getUserContextOptions', (players, options)=>{
     name: "Macros",
     icon: '<i class="fas fa-code"></i>',
     callback: (li)=>{
-      renderMacroGrid(li.dataset.userId)
+      if (li.nodeName) renderMacroGrid(li.dataset.userId)
+      else renderMacroGrid(li.data("userId"))
     },
     condition: (li)=>{
       return game.user.isGM || li.dataset.userId == game.user.id
