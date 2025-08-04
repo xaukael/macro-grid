@@ -137,6 +137,7 @@ var renderMacroGrid = function(userId) {
         let anchor = await TextEditor.enrichHTML(macro.link, {async:false})
         let $a = $(anchor)
         $a[0].dataset.tooltip = macro.name
+        $a[0].dataset.tooltipText = macro.name
         //$a[0].title = macro.name
         $a.html(`<img src="${macro.img}">`)
         $a.contextmenu(async function(e){
