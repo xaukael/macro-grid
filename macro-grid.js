@@ -58,11 +58,38 @@ Hooks.once("setup", async () => {
       renderMacroGrid(game.user.id);
     }
   });
-
+  game.settings.register("macro-grid", "hiddenRows", {
+    name: `Hidden Rows`,
+    hint: `Distance in pixels the grid will be from the bottom of the screen.`,
+    scope: "client",
+    config: false,
+    type: Object,
+    default: {},
+    onChange: hidden => { 
+      /*
+      document.querySelector('#MacroGridHideRows').innerText = "";
+      Object.keys(hidden).forEach(userId=>{
+        Object.keys(hidden[userId]).forEach(row=>{
+          if (hidden[userId][row]) document.querySelector('#MacroGridHideRows').innerText += `#macro-grid-${userId} .slot.row-${row} {display:none;}\n`
+        })
+      })*/
+    }
+  });
+  /*
+  var hideRowsStyle = document.createElement('style');
+  hideRowsStyle.id = "MacroGridHideRows"
+  document.head.appendChild(hideRowsStyle)
+  let hidden = game.settings.get('macro-grid', 'hiddenRows')
+  Object.keys(hidden).forEach(userId=>{
+        Object.keys(hidden[userId]).forEach(row=>{
+          if (hidden[userId][row]) document.querySelector('#MacroGridHideRows').innerText += `#macro-grid-${userId} .slot.row-${row} {display:none;}\n`
+        })
+      })*/
 });
 
 Hooks.on('ready', ()=>{
   if(game.settings.get("macro-grid", "onStartup")) renderMacroGrid(game.user.id);
+  
 })
 
 Hooks.on('getUserContextOptions', (players, options)=>{
@@ -91,7 +118,11 @@ var renderMacroGrid = function(userId) {
   let size = game.settings.get("macro-grid", "gridSize")
   let barMode = game.settings.get("macro-grid", "barMode")
   if (game.user.id != userId) barMode = false
-  console.log(barMode)
+  let hiddenRows = game.settings.get('macro-grid', 'hiddenRows')
+  if (!hiddenRows[userId]) {
+    hiddenRows[userId] = {1:0,2:0,3:0,4:0,5:0}
+    game.settings.set('macro-grid', 'hiddenRows', hiddenRows)
+  }
   let height = size*5 + size/10*4 + 128
   if (barMode) height = size*1 + 75
   let fromBottom = game.settings.get("macro-grid", "bottomOffset")
@@ -101,24 +132,44 @@ var renderMacroGrid = function(userId) {
   let content = `
       <style>
       #hotbar {display: none;}
-      .grid { display: grid; grid-template-columns: repeat(10, ${size}px); gap: ${size/10}px;}/**/
-      .grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
-      .grid > div > a.content-link > img { border: unset; height: ${size-size/20}px; width: ${size-size/20}px;}
-      .grid > div { position: relative; border:1px solid ${game.settings.get("macro-grid", "gridColor")}; height: ${size}px; cursor:pointer; border-radius: ${size/20}px;}
-      .grid > div:hover { border:1px solid var(--color-shadow-highlight); box-shadow: 0 0 ${Math.floor(size/5)}px var(--color-shadow-highlight) inset;}
-      .grid > div > small {opacity: .75; font-size: ${size/4}px;color: var(--color-text-light-highlight); pointer-events: none; position: absolute; top: 0px; right: 0px; padding: 0px ${size/12}px 0px ${size/12}px; text-align: right; background: #111 !important; }
+      .macro-grid { display: grid; grid-template-columns: repeat(10, ${size}px); gap: ${size/10}px;}/**/
+      .macro-grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
+      .macro-grid > div > a.content-link > img { border: unset; height: ${size-size/20}px; width: ${size-size/20}px;}
+      .macro-grid > div { position: relative; border:1px solid ${game.settings.get("macro-grid", "gridColor")}; height: ${size}px; cursor:pointer; border-radius: ${size/20}px;}
+      .macro-grid > div.visibility { display:none; border:1px solid red;}
+      .macro-grid > div:hover { border:1px solid var(--color-shadow-highlight); box-shadow: 0 0 ${Math.floor(size/5)}px var(--color-shadow-highlight) inset;}
+      .macro-grid > div > small {opacity: .75; font-size: ${size/4}px;color: var(--color-text-light-highlight); pointer-events: none; position: absolute; top: 0px; right: 0px; padding: 0px ${size/12}px 0px ${size/12}px; text-align: right; background: #111 !important; z-index: 100;}
       a#taskbar-macro-grid  {opacity: 100%}
       .user-select > option {  color: var(--color-text-light-highlight);  background: #111 !important; }
-      </style><div class="grid"></div>`
+      </style><div class="macro-grid"></div>`
 
   let d = new Dialog({title:'Macro Grid', content, buttons:{},
     render: async (html)=>{
       html[0].parentElement.style.background="unset"
       html.find('.hotkey').remove()
-      let grid = html.find('div.grid')
-      for (let b = 50; b > 0; b-=10) 
+      html.find('style.visibility').remove()
+      let hidden = game.settings.get('macro-grid', 'hiddenRows')[userId]
+      html.append(`<style class="visibility">${Object.keys(hidden).map(row=>hidden[row]?`#macro-grid-${userId} .slot.row-${row} {display:none; opacity: 25%;}`:'').join('\n')}</style>`)
+      if (d.editingVisibility) {
+        html.find('style.visibility-edit').remove()
+        html.append(`<style class="visibility-edit">${[1,2,3,4,5].map(row=>`#macro-grid-${game.userId} .slot.row-${row} {display:block;}`).join('\n')}
+          #macro-grid-${game.userId} > header > a.visibility {color: red !important;}
+          #macro-grid-${game.userId} .macro-grid > div.visibility { display:block !important; }
+          #macro-grid-${game.userId} .macro-grid {  grid-template-columns: repeat(11, ${game.settings.get("macro-grid", "gridSize")}px) !important;
+          </style>`)
+      }
+      let grid = html.find('div.macro-grid')
+      for (let b = 50; b > 0; b-=10) {
           for (let i = 1; i <= 10; i++) 
-            grid.append(`<div data-slot="${b-10+i}" class="slot"></div>`)
+            grid.append(`<div data-slot="${b-10+i}" class="slot row-${b/10}"></div>`)
+          let vis = $(`<div data-row="${b/10}" class="row-${b/10} visibility">${hidden[b/10]?'<img src="icons/svg/blind.svg" style="border:none;">':''}</div>`).click(function(){
+            let hiddenRows = game.settings.get('macro-grid', 'hiddenRows')
+            hiddenRows[userId][this.dataset.row] = hiddenRows[userId][this.dataset.row]?0:1
+            game.settings.set('macro-grid', 'hiddenRows', hiddenRows)
+            d.render(true)
+          })
+        grid.append(vis)
+      }
       
       let activePage = ui.hotbar.page;
       if (game.user.id==user.id)
@@ -223,7 +274,7 @@ var renderMacroGrid = function(userId) {
         }
       })
       if (game.user.id == user.id)
-      html.find('.grid').on('wheel', function(e){
+      html.find('.macro-grid').on('wheel', function(e){
         if (game.user.id != userId) return;
         let page = e.originalEvent.wheelDelta>0?activePage+1:activePage-1
         if (page == 0) page = 5
@@ -244,6 +295,7 @@ var renderMacroGrid = function(userId) {
       if (rendered) return;
       title.parent().dblclick(function(e){e.preventDefault(); e.stopPropagation() })
       title.after(`<a class="popout" data-tooltip="Pop Out"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`)
+      title.after(`<a class="visibility" data-tooltip="Row Visibility"><i class="fa-solid fa-eye"></i></a>`)
       title.after('<a class="info" data-tooltip="LClick to execute <br> RClick to edit <br> Ctrl+RClick to remove <br> Shift+RClick to prompt delete<br>Wheel over grid to change page"><i class="fa-solid fa-circle-info"></i></a>')
       title.after(`<a class="directory" data-tooltip="Macro Directory" ><i style="color:white !important"class="fas fa-folder"></i></a>`)
       
@@ -292,6 +344,20 @@ var renderMacroGrid = function(userId) {
             popout.postMessage(data, '*');
         })
         
+      }).dblclick(function(e){e.stopPropagation();});
+
+      header.find('a.visibility').click(function(){
+        let existing = $(`#macro-grid-${userId} style.visibility-edit`)
+        console.log(existing, existing.length)
+        if (existing.length) {
+          existing.remove()
+          delete d.editingVisibility;
+          d.position.width  -= game.settings.get("macro-grid", "gridSize")
+          return d.render(true)
+        }
+        d.editingVisibility = true;
+        d.position.width += game.settings.get("macro-grid", "gridSize")
+        d.render(true)
       }).dblclick(function(e){e.stopPropagation();});
       header.find('.page-control').click(function(){
         let page = this.dataset.action.includes("up")?ui.hotbar.page+1:ui.hotbar.page-1
