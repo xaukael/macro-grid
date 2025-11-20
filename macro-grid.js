@@ -106,10 +106,12 @@ Hooks.on('getUserContextOptions', (players, options)=>{
   })
 })
 
-
+class MacroGrid extends Dialog {
+  _onKeyDown(event) {}
+}
 
 var renderMacroGrid = function(userId) {
-  console.log("macro grid",userId)
+  //console.log("macro grid",userId)
   if (!userId) userId = game.user.id
   let id = `macro-grid-${userId}`
   
@@ -143,7 +145,8 @@ var renderMacroGrid = function(userId) {
       .user-select > option {  color: var(--color-text-light-highlight);  background: #111 !important; }
       </style><div class="macro-grid"></div>`
 
-  let d = new Dialog({title:'Macro Grid', content, buttons:{},
+
+  let d = new MacroGrid({title:'Macro Grid', content, buttons:{},
     render: async (html)=>{
       html[0].parentElement.style.background="unset"
       html.find('.hotkey').remove()
@@ -239,7 +242,7 @@ var renderMacroGrid = function(userId) {
           //existing = Macro.get(link.data("id"))
         
         let dropped = JSON.parse(e.originalEvent.dataTransfer.getData("text"))
-        console.log(dropped)
+        //console.log(dropped)
         if (dropped.type == 'Macro') {
           let macro = await fromUuid(dropped.uuid)
           //console.log(macro)
@@ -348,7 +351,7 @@ var renderMacroGrid = function(userId) {
 
       header.find('a.visibility').click(function(){
         let existing = $(`#macro-grid-${userId} style.visibility-edit`)
-        console.log(existing, existing.length)
+        //console.log(existing, existing.length)
         if (existing.length) {
           existing.remove()
           delete d.editingVisibility;
@@ -364,7 +367,7 @@ var renderMacroGrid = function(userId) {
         if (page == 0) page = 5
         if (page == 6) page = 1
         ui.hotbar.changePage(page)
-        console.log(d)
+        //console.log(d)
       }).dblclick(function(e){e.stopPropagation();});
       
       header.find('a.directory').click(function(){
@@ -405,7 +408,7 @@ var renderMacroGrid = function(userId) {
   })
   
   Hooks.once('renderDialog', (app, html)=>{
-    console.log(window.innerHeight , parseInt(html[0].style.height) , fromBottom)
+    //console.log(window.innerHeight , parseInt(html[0].style.height) , fromBottom)
     app.setPosition({top: window.innerHeight - parseInt(html[0].style.height) - fromBottom})
   })
   
