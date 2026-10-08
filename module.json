@@ -5,11 +5,11 @@
   "title": "Macro Grid",
   "description": "Grid for managing macro hotbars of all users",
   "authors": [{"name":"Xaukael"}],
-  "version": "2.2.1",
+  "version": "2.2.2",
 	"socket": true,
   "compatibility": {
       "minimum": "10",
-      "verified": "13"
+      "verified": "14"
     },
   "scripts": ["macro-grid.js"],
   "relationships": {

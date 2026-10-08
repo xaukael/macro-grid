@@ -107,7 +107,14 @@ Hooks.on('getUserContextOptions', (players, options)=>{
 })
 
 class MacroGrid extends Dialog {
-  _onKeyDown(event) {}
+  _onKeyDown(event) {
+    if ( event.key === "Escape" ) {
+      event.preventDefault();
+      event.stopPropagation();
+      return console.log('not closing macro grid');//this.close();
+    }
+    
+  }
 }
 
 var renderMacroGrid = function(userId) {
@@ -133,7 +140,7 @@ var renderMacroGrid = function(userId) {
   let rendered = !!w;
   let content = `
       <style>
-      #hotbar {display: none;}
+      ##ui-bottom > #hotbar {display: none;}
       .macro-grid { display: grid; grid-template-columns: repeat(10, ${size}px); gap: ${size/10}px;}/**/
       .macro-grid > div > a.content-link{ position: absolute; background: unset; padding: unset; border: unset;  border-radius: unset; }
       .macro-grid > div > a.content-link > img { border: unset; height: ${size-size/20}px; width: ${size-size/20}px;}
